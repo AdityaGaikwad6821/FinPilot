@@ -74,6 +74,19 @@ export type RiskLevel =
   | 'deficit'
   | 'safe'
 
+export interface SurvivalForecast {
+  survivesMonthUnderPlan: boolean
+  survivesMonthUnderObservedPace: boolean
+  projectedDepletionDayUnderPace: number | null
+  projectedSavingsBreachDayUnderPace: number | null
+  monthEndBalanceUnderPace: number
+  burnRatePace: number
+  recommendedAllowance: number
+  status: 'surviving' | 'at-risk' | 'critical'
+  headline: string
+  actionableGuidance: string
+}
+
 export interface PlanMetrics {
   spentToDate: number
   balance: number
@@ -91,4 +104,6 @@ export interface PlanMetrics {
   monthlyRecurring: number
   risk: RiskLevel
   health: number
+  survival: SurvivalForecast
 }
+

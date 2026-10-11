@@ -1,10 +1,10 @@
 'use client'
 
-import { CalendarClock, Gauge, type LucideIcon, Receipt, TrendingDown, TriangleAlert, Wallet } from 'lucide-react'
+import { CalendarClock, Flame, Gauge, type LucideIcon, Receipt, ShieldCheck, TrendingDown, TriangleAlert, Wallet } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useFinance } from '@/lib/finance/store'
-import { formatINR } from '@/lib/finance/format'
+import { formatINR, formatPreciseINR } from '@/lib/finance/format'
 import { isUnpaid } from '@/lib/finance/calculations'
 import { Meter, RiskBadge } from './primitives'
 
@@ -56,6 +56,7 @@ export function SummaryCards() {
   const next = unpaid[0]
   const free = Math.max(0, plan.discretionary)
   const isShortfall = plan.balance < plan.unpaidObligations
+  const { survival } = plan
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -73,6 +74,102 @@ export function SummaryCards() {
           </div>
         </div>
       )}
+
+      {/* 30-Day Survival Horizon Card */}
+      <article className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-card p-5 sm:col-span-2 xl:col-span-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <ShieldCheck className="size-4" aria-hidden />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  30-Day Survival Horizon
+                </h2>
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                  Broke But Functional
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Comparing observed cash burn against recommended discretionary allowance.
+              </p>
+            </div>
+          </div>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+              survival.status === 'surviving'
+                ? 'bg-positive/10 text-positive border border-positive/20'
+                : survival.status === 'at-risk'
+                  ? 'bg-caution/10 text-caution border border-caution/20'
+                  : 'bg-danger/10 text-danger border border-danger/20',
+            )}
+          >
+            <span
+              className={cn(
+                'size-1.5 rounded-full',
+                survival.status === 'surviving' ? 'bg-positive' : survival.status === 'at-risk' ? 'bg-caution' : 'bg-danger',
+              )}
+            />
+            {survival.status === 'surviving' ? 'Surviving Month' : survival.status === 'at-risk' ? 'At Risk of Depletion' : 'Critical Shortfall'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-1">
+          <div className="rounded-xl border border-border bg-surface p-3">
+            <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+              <Flame className="size-3 text-caution" aria-hidden />
+              At Observed Pace ({formatINR(plan.averageDailySpend)}/day)
+            </p>
+            <p className="mt-1 font-mono text-base font-semibold tabular-nums text-foreground">
+              {survival.projectedDepletionDayUnderPace !== null
+                ? `Depletes on Day ${survival.projectedDepletionDayUnderPace}`
+                : survival.projectedSavingsBreachDayUnderPace !== null
+                  ? `Breaches savings Day ${survival.projectedSavingsBreachDayUnderPace}`
+                  : `Survives through Day ${finance.cycleLength}`}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {plan.daysElapsed > 0
+                ? `${formatINR(plan.spentToDate)} spent in first ${plan.daysElapsed} days`
+                : 'No historical spend recorded'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-surface p-3">
+            <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+              <CalendarClock className="size-3 text-primary" aria-hidden />
+              At Allowed Pace ({formatINR(plan.dailyAllowance)}/day)
+            </p>
+            <p className="mt-1 font-mono text-base font-semibold tabular-nums text-foreground">
+              {survival.survivesMonthUnderPlan
+                ? `Survives through Day ${finance.cycleLength}`
+                : 'Discretionary spend freeze required'}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Ends cycle with {formatINR(plan.reservedSavings)} savings intact
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-surface p-3">
+            <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+              <Receipt className="size-3 text-muted-foreground" aria-hidden />
+              Mandatory Commitments
+            </p>
+            <p className="mt-1 font-mono text-base font-semibold tabular-nums text-foreground">
+              {formatINR(plan.unpaidObligations)} unpaid
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {formatINR(plan.savingsProtected)} protected reserve
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-1 rounded-xl bg-surface/60 border border-border/80 px-3.5 py-2 text-xs leading-relaxed text-muted-foreground">
+          <span className="font-semibold text-foreground">Actionable Guidance: </span>
+          {survival.actionableGuidance}
+        </div>
+      </article>
 
       <SummaryCard icon={Wallet} label="Available Balance" value={formatINR(plan.balance)}>
         <Meter
@@ -101,7 +198,7 @@ export function SummaryCards() {
       </SummaryCard>
 
       <SummaryCard icon={CalendarClock} label="Daily Allowance" value={formatINR(plan.dailyAllowance)} suffix="/day" accent>
-        For the next {plan.daysRemaining} days.{' '}
+        For the next {plan.daysRemaining} days ({formatPreciseINR(plan.dailyAllowance)}/day).{' '}
         {plan.dailyAllowance < 0 ? (
           <span className="text-danger">Discretionary allowance in deficit.</span>
         ) : plan.averageDailySpend > plan.dailyAllowance ? (

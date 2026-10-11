@@ -7,9 +7,21 @@ const inr = new Intl.NumberFormat('en-IN', {
   minimumFractionDigits: 0,
 })
 
+const inrPrecise = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+})
+
 export function formatINR(value: number) {
   const rounded = Math.round(value)
   return `${rounded < 0 ? '−' : ''}${inr.format(Math.abs(rounded))}`
+}
+
+export function formatPreciseINR(value: number) {
+  const sign = value < 0 ? '−' : ''
+  return `${sign}${inrPrecise.format(Math.abs(value))}`
 }
 
 export function formatSignedINR(value: number) {

@@ -7,10 +7,9 @@ const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'FinPilot — Simulate Before You Spend',
+  title: 'FinPilot — Broke But Functional | Survive the Month',
   description:
-    'FinPilot helps you test money decisions before you make them. See how every purchase affects your balance, daily allowance, savings goal and month-end forecast.',
-  generator: 'v0.app',
+    'FinPilot is a financial decision simulator built for the Prompt Run 2026 "Broke But Functional — Survive the Month" challenge. Test spending decisions before you make them, track upcoming obligations, protect emergency savings, and project cash survival across a 30-day budget cycle.',
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },

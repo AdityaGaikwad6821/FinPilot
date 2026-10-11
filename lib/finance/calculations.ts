@@ -1,4 +1,4 @@
-import type { FinanceState, Obligation, PlanMetrics, RiskLevel, Scenario, Transaction } from './types'
+import type { FinanceState, Obligation, PlanMetrics, RiskLevel, Scenario, SurvivalForecast, Transaction } from './types'
 
 export const RISK_THRESHOLDS = { safe: 200, tight: 100 } as const
 export const MAX_AMOUNT = 100000
@@ -185,6 +185,16 @@ export function computePlan(state: FinanceState, assumedDailySpend?: number): Pl
   })
   const risk = getRiskFromScore(health)
 
+  const survival = computeSurvivalForecast(state, {
+    balance,
+    unpaidObligations,
+    reservedSavings,
+    discretionary,
+    daysRemaining,
+    dailyAllowance,
+    averageDailySpend,
+  })
+
   return {
     spentToDate,
     balance,
@@ -202,6 +212,123 @@ export function computePlan(state: FinanceState, assumedDailySpend?: number): Pl
     monthlyRecurring,
     risk,
     health,
+    survival,
+  }
+}
+
+/**
+ * Projects month-end survival metrics and cash-depletion timing.
+ * Evaluates both:
+ * 1. The plan recommendation (spending within daily allowance).
+ * 2. The user's observed spending pace (burn rate based on historical transactions).
+ */
+export function computeSurvivalForecast(
+  state: FinanceState,
+  basics: {
+    balance: number
+    unpaidObligations: number
+    reservedSavings: number
+    discretionary: number
+    daysRemaining: number
+    dailyAllowance: number
+    averageDailySpend: number
+  },
+): SurvivalForecast {
+  const { balance, unpaidObligations, reservedSavings, discretionary, daysRemaining, dailyAllowance, averageDailySpend } = basics
+  const { currentDay, cycleLength } = state
+
+  // Edge case 1: Cycle ended
+  if (daysRemaining <= 0) {
+    const survives = balance >= unpaidObligations
+    return {
+      survivesMonthUnderPlan: survives,
+      survivesMonthUnderObservedPace: survives,
+      projectedDepletionDayUnderPace: null,
+      projectedSavingsBreachDayUnderPace: null,
+      monthEndBalanceUnderPace: balance - unpaidObligations,
+      burnRatePace: averageDailySpend,
+      recommendedAllowance: Math.max(0, dailyAllowance),
+      status: survives ? 'surviving' : 'critical',
+      headline: survives ? 'Month Complete: Budget Survived' : 'Month Complete: Obligation Shortfall',
+      actionableGuidance: survives
+        ? 'You reached the end of the budget cycle with all scheduled obligations covered.'
+        : 'Cash balance was insufficient to settle all scheduled obligations.',
+    }
+  }
+
+  // Edge case 2: Immediate critical shortfall (Cash cannot cover essential bills)
+  if (balance < unpaidObligations) {
+    const shortfall = unpaidObligations - balance
+    return {
+      survivesMonthUnderPlan: false,
+      survivesMonthUnderObservedPace: false,
+      projectedDepletionDayUnderPace: currentDay,
+      projectedSavingsBreachDayUnderPace: currentDay,
+      monthEndBalanceUnderPace: balance - unpaidObligations - averageDailySpend * daysRemaining,
+      burnRatePace: averageDailySpend,
+      recommendedAllowance: 0,
+      status: 'critical',
+      headline: `Critical Shortfall: Short by ₹${shortfall.toLocaleString('en-IN')} on Bills`,
+      actionableGuidance: `Current cash (₹${balance.toLocaleString('en-IN')}) cannot cover mandatory commitments (₹${unpaidObligations.toLocaleString('en-IN')}). Immediately cancel unpaid subscriptions or adjust budget before spending anything further.`,
+    }
+  }
+
+  // Day-by-day simulation under observed burn rate pace
+  const unpaid = state.obligations.filter(isUnpaid)
+  let simBalance = balance
+  let depletionDay: number | null = null
+  let savingsBreachDay: number | null = null
+
+  for (let d = currentDay; d <= cycleLength; d++) {
+    const billsToday = sum(
+      unpaid.filter((o) => (o.dueDay <= currentDay ? d === currentDay : o.dueDay === d)).map((o) => o.amount),
+    )
+    simBalance -= (billsToday + averageDailySpend)
+
+    if (savingsBreachDay === null && simBalance < reservedSavings && reservedSavings > 0) {
+      savingsBreachDay = d
+    }
+    if (depletionDay === null && simBalance < 0) {
+      depletionDay = d
+    }
+  }
+
+  const survivesMonthUnderPlan = discretionary >= 0
+  const survivesMonthUnderObservedPace = depletionDay === null
+
+  let status: 'surviving' | 'at-risk' | 'critical' = 'surviving'
+  let headline = ''
+  let actionableGuidance = ''
+
+  if (depletionDay !== null) {
+    status = 'at-risk'
+    headline = `Cash Runs Out on Day ${depletionDay} at Current Pace`
+    actionableGuidance = `You are spending ₹${Math.round(averageDailySpend)}/day. At this pace, rent and upcoming bills will deplete your cash on Day ${depletionDay}. Slow down to the recommended ₹${Math.round(Math.max(0, dailyAllowance))}/day to survive through Day ${cycleLength}.`
+  } else if (savingsBreachDay !== null) {
+    status = 'at-risk'
+    headline = `Savings Goal Breached on Day ${savingsBreachDay} at Current Pace`
+    actionableGuidance = `You will survive the month, but your ₹${reservedSavings.toLocaleString('en-IN')} savings reserve will be breached by Day ${savingsBreachDay}. Trim daily spending by ₹${Math.round(Math.max(0, averageDailySpend - dailyAllowance))}/day to protect your savings.`
+  } else if (discretionary < 0) {
+    status = 'at-risk'
+    headline = `Discretionary Deficit of ₹${Math.abs(discretionary).toLocaleString('en-IN')}`
+    actionableGuidance = `Freeze discretionary spending (limit to ₹0/day) so you have enough cash to cover upcoming bills of ₹${unpaidObligations.toLocaleString('en-IN')}.`
+  } else {
+    status = 'surviving'
+    headline = `On Track to Survive Month (Day 1 to ${cycleLength})`
+    actionableGuidance = `Stick to ₹${Math.round(dailyAllowance)}/day discretionary allowance to reach Day ${cycleLength} with ₹${reservedSavings.toLocaleString('en-IN')} saved and all bills paid.`
+  }
+
+  return {
+    survivesMonthUnderPlan,
+    survivesMonthUnderObservedPace,
+    projectedDepletionDayUnderPace: depletionDay,
+    projectedSavingsBreachDayUnderPace: savingsBreachDay,
+    monthEndBalanceUnderPace: simBalance,
+    burnRatePace: averageDailySpend,
+    recommendedAllowance: Math.max(0, dailyAllowance),
+    status,
+    headline,
+    actionableGuidance,
   }
 }
 
@@ -395,15 +522,26 @@ function balanceSeries(state: FinanceState, assumedDailySpend: number) {
     state.startingBudget - sum(state.transactions.filter((t) => t.day <= d).map((t) => t.amount))
   const balanceNow = state.startingBudget - sum(state.transactions.map((t) => t.amount))
   const unpaid = state.obligations.filter(isUnpaid)
+  const totalFutureSteps = Math.max(1, state.cycleLength - state.currentDay)
+  const daysRemaining = Math.max(0, state.cycleLength - state.currentDay + 1)
+  const totalFutureDiscretionary = assumedDailySpend * daysRemaining
 
   for (let day = 1; day <= state.cycleLength; day++) {
     if (day < state.currentDay) {
       series.push(historic(day))
       continue
     }
-    const obligationsDue = sum(unpaid.filter((o) => Math.max(o.dueDay, state.currentDay) <= day).map((o) => o.amount))
-    const daysSpent = day - state.currentDay + 1
-    series.push(balanceNow - obligationsDue - assumedDailySpend * daysSpent)
+    if (day === state.currentDay) {
+      // Current day anchor strictly matches current available balance
+      series.push(balanceNow)
+      continue
+    }
+    const step = day - state.currentDay
+    const obligationsDue = sum(
+      unpaid.filter((o) => o.dueDay <= day).map((o) => o.amount),
+    )
+    const discretionarySpent = (step / totalFutureSteps) * totalFutureDiscretionary
+    series.push(balanceNow - obligationsDue - discretionarySpent)
   }
   return series
 }

@@ -49,7 +49,12 @@ function Sidebar() {
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
       <Logo className="px-2" />
       <p className="mt-1.5 px-2 text-xs text-muted-foreground">Simulate Before You Spend</p>
-      <nav aria-label="Main" className="mt-8 flex flex-col gap-1">
+      <div className="mt-2 px-2">
+        <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary ring-1 ring-inset ring-primary/20">
+          Broke But Functional
+        </span>
+      </div>
+      <nav aria-label="Sidebar navigation" className="mt-6 flex flex-col gap-1">
         {NAV.map((item) => {
           const active = view === item.id
           const Icon = item.icon
@@ -89,7 +94,7 @@ function MobileNav() {
   const { view, setView } = useFinance()
   return (
     <nav
-      aria-label="Main"
+      aria-label="Mobile navigation"
       className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-border bg-sidebar/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       {NAV.map((item) => {
@@ -157,7 +162,7 @@ function Header() {
         <div>
           <Logo className="mb-4 md:hidden" />
           <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">Good morning, Aditya</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Your money, one decision ahead.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Broke But Functional — Survive the Month</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3">
@@ -194,10 +199,18 @@ function Header() {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:shadow-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 px-4 pt-6 pb-28 sm:px-6 md:pb-10 lg:px-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 px-4 pt-6 pb-28 sm:px-6 md:pb-10 lg:px-8 focus:outline-none">
+          {children}
+        </main>
       </div>
       <MobileNav />
     </div>

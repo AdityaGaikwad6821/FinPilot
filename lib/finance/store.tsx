@@ -23,6 +23,21 @@ import type { CategoryId, FinanceState, Obligation, PlanMetrics, Scenario, Trans
 
 export type ViewId = 'overview' | 'spending' | 'commitments' | 'savings' | 'simulator' | 'settings'
 
+export const VALID_VIEWS: readonly ViewId[] = [
+  'overview',
+  'spending',
+  'commitments',
+  'savings',
+  'simulator',
+  'settings',
+] as const
+
+export function parseValidView(raw: string | null | undefined): ViewId | null {
+  if (!raw) return null
+  const normalized = raw.trim().toLowerCase()
+  return (VALID_VIEWS as readonly string[]).includes(normalized) ? (normalized as ViewId) : null
+}
+
 export interface Draft {
   id: string
   name: string
@@ -229,7 +244,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const hasHydrated = useRef(false)
 
-  // Hydrate persisted state on client mount safely
+  // Hydrate persisted state and view on client mount safely
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -249,8 +264,54 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch {
       // Local storage disabled or corrupted, ignore safely
     }
+
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const urlView = parseValidView(params.get('view') || params.get('tab'))
+      if (urlView) {
+        dispatch({ type: 'setView', view: urlView })
+      }
+    } catch {
+      // Ignore
+    }
+
+    const onPopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const popped = parseValidView(params.get('view') || params.get('tab')) ?? 'overview'
+        dispatch({ type: 'setView', view: popped })
+      } catch {
+        // Ignore
+      }
+    }
+
+    window.addEventListener('popstate', onPopState)
     hasHydrated.current = true
+    return () => window.removeEventListener('popstate', onPopState)
   }, [])
+
+  // Sync active view to URL and localStorage
+  useEffect(() => {
+    if (!hasHydrated.current) return
+    try {
+      localStorage.setItem('finpilot_last_view', state.view)
+      const currentUrl = new URL(window.location.href)
+      const currentParam = currentUrl.searchParams.get('view')
+      if (state.view === 'overview') {
+        if (currentParam) {
+          currentUrl.searchParams.delete('view')
+          currentUrl.searchParams.delete('tab')
+          window.history.pushState({ view: 'overview' }, '', currentUrl.toString())
+        }
+      } else if (currentParam !== state.view) {
+        currentUrl.searchParams.set('view', state.view)
+        currentUrl.searchParams.delete('tab')
+        window.history.pushState({ view: state.view }, '', currentUrl.toString())
+      }
+    } catch {
+      // Ignore
+    }
+  }, [state.view])
 
   // Sync confirmed changes to localStorage
   useEffect(() => {

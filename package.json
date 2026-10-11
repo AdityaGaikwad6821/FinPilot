@@ -1,12 +1,16 @@
 {
-  "name": "my-project",
-  "version": "0.1.0",
+  "name": "finpilot",
+  "version": "1.0.0",
+  "description": "Financial decision simulator for the Prompt Run 2026 'Broke But Functional — Survive the Month' problem statement.",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "tsc --noEmit",
+    "test": "node --test tests/financial-engine.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
