@@ -108,12 +108,12 @@ function MobileNav() {
             aria-current={active ? 'page' : undefined}
             aria-label={item.label}
             className={cn(
-              'flex flex-col items-center gap-1 rounded-lg py-2.5 text-[10px] font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+              'flex flex-col items-center gap-1 rounded-lg py-2.5 px-0.5 min-w-0 text-[10px] font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
               active ? 'text-primary' : 'text-muted-foreground',
             )}
           >
-            <Icon className="size-5" />
-            {item.short}
+            <Icon className="size-5 shrink-0" />
+            <span className="truncate max-w-full">{item.short}</span>
           </button>
         )
       })}

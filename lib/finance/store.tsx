@@ -351,36 +351,87 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'reset', id: newId() })
   }, [])
 
-  const value: FinanceContextValue = {
-    finance: state.finance,
-    plan,
-    draft: state.draft,
-    validation,
-    simulationActive: state.simulationActive,
-    simulatedState,
-    simulatedPlan,
-    view: state.view,
-    setView: (view) => dispatch({ type: 'setView', view }),
-    updateDraft: (patch) => dispatch({ type: 'updateDraft', patch }),
-    loadPreset: (preset) => dispatch({ type: 'loadPreset', preset, id: newId() }),
-    simulateCancellation: (obligationId) => dispatch({ type: 'simulateCancellation', obligationId, id: newId() }),
-    activate: () => dispatch({ type: 'activate' }),
-    discard: () => dispatch({ type: 'discard', id: newId() }),
-    commit,
-    addTransaction: (transaction) => dispatch({ type: 'addTransaction', transaction }),
-    editTransaction: (id, patch) => dispatch({ type: 'editTransaction', id, patch }),
-    deleteTransaction: (id) => dispatch({ type: 'deleteTransaction', id }),
-    addObligation: (obligation) => dispatch({ type: 'addObligation', obligation }),
-    editObligation: (id, patch) => dispatch({ type: 'editObligation', id, patch }),
-    deleteObligation: (id) => dispatch({ type: 'deleteObligation', id }),
-    markPaid: (id) => dispatch({ type: 'markPaid', id }),
-    unmarkPaid: (id) => dispatch({ type: 'unmarkPaid', id }),
-    cancelSubscription: (id) => dispatch({ type: 'cancelSubscription', id }),
-    resumeSubscription: (id) => dispatch({ type: 'resumeSubscription', id }),
-    setSavingsTarget: (amount) => dispatch({ type: 'setSavingsTarget', amount }),
-    updateSettings: (patch) => dispatch({ type: 'updateSettings', patch }),
-    reset: handleReset,
-  }
+  const setView = useCallback((view: ViewId) => dispatch({ type: 'setView', view }), [])
+  const updateDraft = useCallback((patch: Partial<Omit<Draft, 'id'>>) => dispatch({ type: 'updateDraft', patch }), [])
+  const loadPreset = useCallback((preset: Preset) => dispatch({ type: 'loadPreset', preset, id: newId() }), [])
+  const simulateCancellation = useCallback((obligationId: string) => dispatch({ type: 'simulateCancellation', obligationId, id: newId() }), [])
+  const activate = useCallback(() => dispatch({ type: 'activate' }), [])
+  const discard = useCallback(() => dispatch({ type: 'discard', id: newId() }), [])
+  const addTransaction = useCallback((transaction: Transaction) => dispatch({ type: 'addTransaction', transaction }), [])
+  const editTransaction = useCallback((id: string, patch: Partial<Omit<Transaction, 'id'>>) => dispatch({ type: 'editTransaction', id, patch }), [])
+  const deleteTransaction = useCallback((id: string) => dispatch({ type: 'deleteTransaction', id }), [])
+  const addObligation = useCallback((obligation: Obligation) => dispatch({ type: 'addObligation', obligation }), [])
+  const editObligation = useCallback((id: string, patch: Partial<Omit<Obligation, 'id'>>) => dispatch({ type: 'editObligation', id, patch }), [])
+  const deleteObligation = useCallback((id: string) => dispatch({ type: 'deleteObligation', id }), [])
+  const markPaid = useCallback((id: string) => dispatch({ type: 'markPaid', id }), [])
+  const unmarkPaid = useCallback((id: string) => dispatch({ type: 'unmarkPaid', id }), [])
+  const cancelSubscription = useCallback((id: string) => dispatch({ type: 'cancelSubscription', id }), [])
+  const resumeSubscription = useCallback((id: string) => dispatch({ type: 'resumeSubscription', id }), [])
+  const setSavingsTarget = useCallback((amount: number) => dispatch({ type: 'setSavingsTarget', amount }), [])
+  const updateSettings = useCallback((patch: SettingsPatch) => dispatch({ type: 'updateSettings', patch }), [])
+
+  const value: FinanceContextValue = useMemo(
+    () => ({
+      finance: state.finance,
+      plan,
+      draft: state.draft,
+      validation,
+      simulationActive: state.simulationActive,
+      simulatedState,
+      simulatedPlan,
+      view: state.view,
+      setView,
+      updateDraft,
+      loadPreset,
+      simulateCancellation,
+      activate,
+      discard,
+      commit,
+      addTransaction,
+      editTransaction,
+      deleteTransaction,
+      addObligation,
+      editObligation,
+      deleteObligation,
+      markPaid,
+      unmarkPaid,
+      cancelSubscription,
+      resumeSubscription,
+      setSavingsTarget,
+      updateSettings,
+      reset: handleReset,
+    }),
+    [
+      state.finance,
+      plan,
+      state.draft,
+      validation,
+      state.simulationActive,
+      simulatedState,
+      simulatedPlan,
+      state.view,
+      setView,
+      updateDraft,
+      loadPreset,
+      simulateCancellation,
+      activate,
+      discard,
+      commit,
+      addTransaction,
+      editTransaction,
+      deleteTransaction,
+      addObligation,
+      editObligation,
+      deleteObligation,
+      markPaid,
+      unmarkPaid,
+      cancelSubscription,
+      resumeSubscription,
+      setSavingsTarget,
+      updateSettings,
+      handleReset,
+    ],
+  )
 
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>
 }

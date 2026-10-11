@@ -7,7 +7,7 @@ import type { CategoryId, RiskLevel } from '@/lib/finance/types'
 export function Panel({ className, children, ...props }: React.ComponentProps<'section'>) {
   return (
     <section
-      className={cn('rounded-2xl border border-border bg-card p-5 shadow-[0_1px_0_0_oklch(1_0_0/4%)_inset] sm:p-6', className)}
+      className={cn('overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-[0_1px_0_0_oklch(1_0_0/4%)_inset] sm:p-6', className)}
       {...props}
     >
       {children}

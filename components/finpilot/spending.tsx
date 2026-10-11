@@ -64,6 +64,7 @@ export function CategoryBreakdown() {
             <Bar
               dataKey="amount"
               radius={6}
+              isAnimationActive={false}
               label={{ position: 'right', formatter: (v: unknown) => formatINR(Number(v)), className: 'fill-foreground text-xs font-mono' }}
             >
               {rows.map((r) => (

@@ -112,7 +112,7 @@ export function RunwayChart() {
             label={{ value: 'Today', position: 'top', className: 'fill-primary text-[11px] font-medium' }}
           />
           <ChartTooltip cursor={{ strokeDasharray: '3 3' }} content={<RunwayTooltip currentDay={finance.currentDay} />} />
-          <Line dataKey="current" type="monotone" stroke="var(--color-current)" strokeWidth={2.25} dot={false} activeDot={{ r: 4 }} />
+          <Line dataKey="current" type="monotone" stroke="var(--color-current)" strokeWidth={2.25} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
           <Line
             dataKey="simulated"
             type="monotone"
